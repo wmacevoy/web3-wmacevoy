@@ -4,24 +4,27 @@
     function SendReqestToServer(url,method,request,handler) {
         // https://www.w3schools.com/xml/tryit.asp?filename=tryajax_callback
         const xhttp=new XMLHttpRequest();
-        let value = 33;
 
+        const urlEncodedRequest = "request=" + encodeURIComponent(JSON.stringify(request))
+
+        if (method == "GET") {
+            url = url + "?" + urlEncodedRequest;
+        }
         xhttp.open(method, url, true);
 
         xhttp.onreadystatechange = function() {
-            console.log('xhttp readyState='+this.readyState+" status="+this.status);
             if (this.readyState == 4 && this.status == 200) {
               handler(this.response);
             }
         };
 
-        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-        const json = JSON.stringify(request);
-        console.log('json: ' + json)
-        xhttp.send(json);
+        xhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        if (method == "POST") {
+            xhttp.send(urlEncodedRequest)
+        } else {
+            xhttp.send();
+        }
 
-
-        console.log('server request sent');
     }
 
     function ProcessResponse(response) {
@@ -30,13 +33,13 @@
 
 
     function addOnServer() {
-        const x = document.getElementById("x");
-        const y = document.getElementById("y");
+        const x = parseFloat(document.getElementById("x").value);
+        const y = parseFloat(document.getElementById("y").value);
 
         // be nice
 
         const url = "add2.php";
-        const method = "POST";
+        const method = "GET";
         const request = {'op': 'add', 'args': [x,y]};
 
         SendReqestToServer(url,method,request,
