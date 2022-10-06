@@ -14,7 +14,8 @@
 
         xhttp.onreadystatechange = function() {
             if (this.readyState == 4 && this.status == 200) {
-              handler(this.response);
+                json = JSON.parse(this.response);
+                handler(json);
             }
         };
 
@@ -27,19 +28,23 @@
 
     }
 
-    function ProcessResponse(response) {
-        alert(response);
+  function ProcessResponse(response) {
+        if (response.status == "ok") {
+            document.getElementById("z").value = response.value;
+        } else {
+            alert(response.message);
+        }
     }
 
 
     function addOnServer() {
-        const x = parseFloat(document.getElementById("x").value);
-        const y = parseFloat(document.getElementById("y").value);
+        const x = (document.getElementById("x").value).trim();
+        const y = (document.getElementById("y").value).trim();
 
         // be nice
 
         const url = "add2.php";
-        const method = "GET";
+        const method = "POST";
         const request = {'op': 'add', 'args': [x,y]};
 
         SendReqestToServer(url,method,request,
@@ -50,12 +55,12 @@
     }
 
 </script>
-<form onsubmit="addOnServer(); return false;" >
-    <input type="text" id="x" name="x" placeholder="x" >
-    +
-    <input type="text" id="y" name="y" placeholder="y" >
-=
-<input type="text" name="z" placeholder="x+y" >
-<input type="submit" value="?">
 
+<form onsubmit="addOnServer(); return false;" >
+  <input type="text" id="x" name="x" placeholder="x" >
+  +
+  <input type="text" id="y" name="y" placeholder="y" >
+  =
+  <input type="text" id="z" name="z" placeholder="x+y" >
+  <input type="submit" value="?">
 </form>
