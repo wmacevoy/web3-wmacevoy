@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# https://laravel.com/docs/5.1/quickstart
+
+reset=false
+for arg in "$@"
+do
+    case "$arg"
+    in
+	--reset) reset=true
+    esac
+done    
+
 # check for required packages
 for pkg in composer php php-cli php-xml php-curl mysql-server mysql-client
 do
@@ -21,6 +32,11 @@ then
 fi
 
 # create quickstart
+if [ "$reset" = "true" ]
+then
+    /bin/rm -rf quickstart
+fi
+
 if [ ! -d quickstart ]
 then
     echo "creating quickstart project..."
@@ -50,6 +66,14 @@ then
     DB_NAME=laravel-quickstart-db
     DB_USER=laravel-quickstart-user
     DB_PASS="$(key256)"
+    if [ "$reset" = "true" ]
+    then
+    sudo mysql <<SQL
+DROP DATABASE \`$DB_NAME\`;
+DROP USER '$DB_USER'@'localhost';
+SQL
+    fi
+    
     sudo mysql <<SQL
 CREATE 	 DATABASE IF NOT EXISTS \`$DB_NAME\`;
 DROP USER IF EXISTS '$DB_USER'@'localhost';
@@ -62,12 +86,52 @@ SQL
   sed -i- -e "s/^DB_DATABASE=.*$/DB_DATABASE='$DB_NAME'/" \
          -e "s/^DB_USERNAME=.*$/DB_USERNAME='$DB_USER'/" \
          -e "s/^DB_PASSWORD=.*$/DB_PASSWORD='$DB_PASS'/" .env
+
+  if ! php artisan migrate
+  then
+      echo "artisan migrate failed."
+      exit 1
+  fi
+  
 fi
 
-if ! php artisan migrate
+# count how many regular files are in args
+function count() {
+    local n=0
+    local file
+    for file in "$@"
+    do
+	if [ -f "$file" ]
+	then
+	    n=$(($n+1))
+	fi
+    done
+    echo $n
+}
+
+# see if create_tasks_table migraion already exits, ow create with name column
+if [ $(count database/migrations/*create_tasks_table.php) -eq 0 ]
 then
-    echo "artisan migrate failed."
-    exit 1
+    echo "Create table tasks and migrate"
+    php artisan make:migration create_tasks_table --create=tasks
+
+    sed -i- "/^ *\$table->id();\$/a            \$table->string('name');" database/migrations/*create_tasks_table.php
+
+    if ! php artisan migrate
+    then
+	echo "table creation failed"
+	exit 1
+    fi
+    if ! php artisan make:model Task
+    then
+	echo "model creation failed"
+	exit 1
+    fi
 fi
 
-echo "setup ok"
+if ! grep "App\\Models\\Task" routes/web.php
+then
+   cp -r ../skeleton/* .
+fi
+
+echo "setup ok - use 'php artisan serve' to run dev server in the quickstart directory"
